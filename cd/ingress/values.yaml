@@ -13,9 +13,9 @@ ingress:
     - path: /posts
       service: backend-service
       port: 3000
-    - path: /mysql
-      service: mysql
-      port: 3306
-    - path: /redis
-      service: redis
-      port: 6379
+    # - path: /mysql
+    #   service: mysql
+    #   port: 3306
+    # - path: /redis
+    #   service: redis
+    #   port: 6379
