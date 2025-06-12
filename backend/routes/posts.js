@@ -29,26 +29,11 @@ const failedResponses = new client.Counter({
 router.get('/', async (req, res) => {
   totalRequests.inc({ method: req.method, route: '/' });
   try {
-    redis.get('posts', async (err, cachedPosts) => {
-      if (err) {
-        console.error('Error checking Redis:', err);
-        return res.status(500).json({ error: 'Error accessing cache' });
-      }
-
-      if (cachedPosts) {
-        successfulResponses.inc({ method: req.method, route: '/', status: 200 });
-        console.log('Returning posts from cache');
-        return res.status(200).json({ data: JSON.parse(cachedPosts) });
-      }
-
-      console.log('Cache miss, fetching from database');
       const posts = await Post.findAll();
-      redis.setex('posts', 3600, JSON.stringify(posts));  // Cache data for 1 hour
 
       successfulResponses.inc({ method: req.method, route: '/', status: 200 });
       console.log('Returning posts from database');
       return res.status(200).json({ data: posts });
-    });
   } catch (error) {
     failedResponses.inc({ method: req.method, route: '/', status: 500 });
     console.error('Error retrieving posts:', error);
@@ -63,13 +48,6 @@ router.post('/', async (req, res) => {
     const newPost = await Post.create({ title, description });
     successfulResponses.inc({ method: req.method, route: '/', status: 200 });
     console.log('Post created successfully:', newPost);
-    redis.del(`posts`, (delErr, response) => {
-      if (delErr) {
-        console.error('Error deleting cached posts:', delErr);
-      } else if (response === 1) {
-        console.log(`Cache for posts deleted successfully.`);
-      }
-    });
 
     res.status(201).json(newPost);
   } catch (error) {
@@ -84,22 +62,8 @@ router.get('/:id', async (req, res) => {
   totalRequests.inc({ method: req.method, route: '/:id' });
   const { id } = req.params;
   try {
-    redis.get(`post:${id}`, async (err, cachedPost) => {
-      if (err) {
-        console.error('Error checking Redis:', err);
-        return res.status(500).json({ error: 'Error accessing cache' });
-      }
-
-      if (cachedPost) {
-        successfulResponses.inc({ method: req.method, route: '/:id', status: 200 });
-        console.log('Returning post from cache');
-        return res.status(200).json(JSON.parse(cachedPost));
-      }
-
-      console.log('Cache miss, fetching from database');
       const post = await Post.findByPk(id);
       if (post) {
-        redis.setex(`post:${id}`, 3600, JSON.stringify(post));  // Cache data for 1 hour
         successfulResponses.inc({ method: req.method, route: '/:id', status: 200 });
         console.log('Returning post from database');
         return res.status(200).json(post);
@@ -108,7 +72,6 @@ router.get('/:id', async (req, res) => {
         console.log('Post not found');
         return res.status(404).json({ error: 'Post not found' });
       }
-    });
   } catch (error) {
     failedResponses.inc({ method: req.method, route: '/:id', status: 500 });
     console.error('Error retrieving post:', error);
@@ -123,34 +86,13 @@ router.put('/:id', async (req, res) => {
   try {
     const post = await Post.findByPk(id);
     if (post) {
-      redis.get(`post:${id}`, (err, cachedPost) => {
-        if (err) {
-          console.error('Error checking Redis:', err);
-        } else if (cachedPost) {
-          redis.del(`post:${id}`, (delErr, response) => {
-            if (delErr) {
-              console.error('Error deleting cached post:', delErr);
-            } else if (response === 1) {
-              console.log(`Cache for post:${id} deleted successfully.`);
-            }
-          });
-        } else {
-          console.log(`Post ${id} not found in cache, skipping cache deletion.`);
-        }
-      });
+
       post.title = title || post.title;
       post.description = description || post.description;
       await post.save();
       successfulResponses.inc({ method: req.method, route: '/:id', status: 200 });
       console.log('Post updated successfully:', post);
 
-      redis.del(`posts`, (delErr, response) => {
-        if (delErr) {
-          console.error('Error deleting cached posts:', delErr);
-        } else if (response === 1) {
-          console.log(`Cache for posts deleted successfully.`);
-        }
-      });
 
       res.status(200).json(post);
     } else {
@@ -172,31 +114,8 @@ router.delete('/:id', async (req, res) => {
     const post = await Post.findByPk(id);
     if (post) {
       await post.destroy();
-      redis.get(`post:${id}`, (err, cachedPost) => {
-        if (err) {
-          console.error('Error checking Redis:', err);
-        } else if (cachedPost) {
-          redis.del(`post:${id}`, (delErr, response) => {
-            if (delErr) {
-              console.error('Error deleting cached post:', delErr);
-            } else if (response === 1) {
-              console.log(`Cache for post:${id} deleted successfully.`);
-            }
-          });
-        } else {
-          console.log(`Post ${id} not found in cache, skipping cache deletion.`);
-        }
-      });
       successfulResponses.inc({ method: req.method, route: '/:id', status: 200 });
       console.log('Post deleted successfully:', post);
-
-      redis.del(`posts`, (delErr, response) => {
-        if (delErr) {
-          console.error('Error deleting cached posts:', delErr);
-        } else if (response === 1) {
-          console.log(`Cache for posts deleted successfully.`);
-        }
-      });
 
       res.status(200).json({ message: 'Post deleted successfully' });
     } else {
