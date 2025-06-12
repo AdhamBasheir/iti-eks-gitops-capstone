@@ -1,4 +1,4 @@
-name: Terraform Apply/Destroy - Platform
+name: Terraform Apply/Destroy - CertManager
 on:
   workflow_dispatch:
     inputs:
@@ -41,6 +41,6 @@ jobs:
             --instance-ids "${{ steps.get_bastion_id.outputs.instance_id }}" \
             --parameters 'commands=[
               "/root/pull.sh > /root/pull-done 2> /root/pull-fail",
-              "/root/iti-eks/utils/platform.sh \"${{ vars.BUCKET_NAME }}\" \"${{ vars.CLUSTER_NAME }}\" \"${{ vars.AWS_REGION }}\" \"${{ github.actor }}\" \"${{ github.event.inputs.action }}\" > /root/platform-done 2> /root/platform-fail"
+              "/root/iti-eks/utils/cert.sh \"${{ vars.BUCKET_NAME }}\" \"${{ vars.CLUSTER_NAME }}\" \"${{ vars.AWS_REGION }}\" \"${{ github.event.inputs.action }}\" > /root/index-done 2> /root/index-fail"
             ]' \
             --output text

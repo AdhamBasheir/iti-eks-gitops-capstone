@@ -3,7 +3,7 @@ ingress:
   namespace: default
   class: nginx
   clusterIssuer: letsencrypt
-  host: app.iti-project.com
+  host: app.danielfarag.cloud
   tlsSecret: app-tls
 
   paths:
